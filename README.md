@@ -9,7 +9,7 @@ yarn install
 ```
 
 2. Create an .env file from the .env.example file
-3. Fill required environment variables to the .env file
+3. Fill required environment variables of the .env file
 4. Start the packager
 
 ```
