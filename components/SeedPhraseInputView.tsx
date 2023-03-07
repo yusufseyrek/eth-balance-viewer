@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -8,11 +8,15 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native'
+import * as SecureStore from 'expo-secure-store'
 
-import { getAddressFromMnemonic, getETHBalance } from '../utils/web3'
+import { getPrivateKeyFromMnemonic } from '../utils/web3'
+import { SAVED_PRIVATE_KEY } from '../utils/constants'
+import { ethers } from 'ethers'
+import Button from './Button'
 
 const SeedPhraseInputView = (props: {
-  onSeedPhraseUpdated: (address: string, balance: string) => void
+  onPrivateKeySaved: (privateKey: string) => void
 }) => {
   const [mnemonic, setMnemonic] = useState('')
   const [busy, setBusy] = useState(false)
@@ -21,24 +25,17 @@ const SeedPhraseInputView = (props: {
     setBusy(true)
 
     setTimeout(async () => {
-      const [mnemonicErr, address] = getAddressFromMnemonic(mnemonic)
+      const [mnemonicErr, privateKey] = getPrivateKeyFromMnemonic(mnemonic)
       if (mnemonicErr) {
         Alert.alert(mnemonicErr.message)
       } else {
-        const [balanceErr, balance] = await getETHBalance(address)
-        if (balanceErr) {
-          Alert.alert(balanceErr.message)
-        } else {
-          props.onSeedPhraseUpdated(address, balance)
-        }
-        setBusy(false)
+        await SecureStore.setItemAsync(SAVED_PRIVATE_KEY, privateKey)
+        props.onPrivateKeySaved(privateKey)
+        setMnemonic('')
+        Alert.alert('Success', 'Private key is securely stored!')
       }
+      setBusy(false)
     }, 0)
-  }
-
-  const onSeedTextChange = (text: string) => {
-    setMnemonic(text)
-    props.onSeedPhraseUpdated('', '')
   }
 
   return (
@@ -52,18 +49,20 @@ const SeedPhraseInputView = (props: {
         multiline
         numberOfLines={4}
         value={mnemonic}
-        onChangeText={(text) => onSeedTextChange(text)}
+        onChangeText={setMnemonic}
         textAlignVertical="top"
       />
-      <Pressable style={styles.saveButton} onPress={onPressSave}>
-        <Text style={styles.saveButtonText}>Show ETH Balance</Text>
-      </Pressable>
 
-      {busy ? (
+      <Button text="Verify Seed Phrase" onPress={onPressSave} />
+
+      {busy && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={'white'} />
+          <Text style={styles.loadingText}>
+            Verifying Seed Phrase. Please wait...
+          </Text>
         </View>
-      ) : null}
+      )}
     </View>
   )
 }
@@ -89,23 +88,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     textDecorationLine: 'none',
   },
-  saveButton: {
-    width: 190,
-    height: 40,
-    backgroundColor: 'black',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
-    marginTop: 10,
-    borderRadius: 3,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: 'bold',
-    letterSpacing: 0.25,
-    color: 'white',
-  },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -117,6 +99,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
   },
 })
 

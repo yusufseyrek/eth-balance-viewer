@@ -1,18 +1,36 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, Alert } from 'react-native'
+import { getAddressAndBalanceFromPrivateKey } from '../utils/web3'
 
-const ETHBalanceView = (props: { address: string; balance: string }) => {
-  if (!props.address && !props.balance) {
+const ETHBalanceView = (props: { privateKey: string }) => {
+  const [address, setAddress] = useState('')
+  const [balance, setBalance] = useState('')
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [err, address, balance] = await getAddressAndBalanceFromPrivateKey(
+        props.privateKey
+      )
+      if (err) {
+        Alert.alert('Failure', 'Could not get address and the ETH balance.')
+      } else {
+        setAddress(address)
+        setBalance(balance)
+      }
+    }
+    fetchData()
+  }, [props.privateKey])
+
+  if (!address || !balance) {
     return null
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>
-        Following address found for the given seed phrase above:
-      </Text>
-      <Text>{props.address}</Text>
+      <Text style={styles.heading}>Address:</Text>
+      <Text>{address}</Text>
       <Text style={styles.heading}>Balance:</Text>
-      <Text>{`${props.balance} ETH`}</Text>
+      <Text>{`${balance} ETH`}</Text>
     </View>
   )
 }
